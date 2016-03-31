@@ -28,8 +28,8 @@ import org.springframework.beans.factory.config.Scope;
  * Scope for job context. Objects in this scope use the Spring container as an
  * object factory, so there is only one instance of such a bean per executing
  * job. All objects in this scope are &lt;aop:scoped-proxy/&gt; (no need to
- * decorate the bean definitions).<br/>
- * <br/>
+ * decorate the bean definitions).<br>
+ * <br>
  *
  * In addition, support is provided for late binding of references accessible
  * from the {@link JobContext} using #{..} placeholders. Using this feature,
@@ -87,9 +87,8 @@ public class JobScope extends BatchScopeSupport {
 	/**
 	 * @see Scope#get(String, ObjectFactory)
 	 */
-	@SuppressWarnings("rawtypes")
 	@Override
-	public Object get(String name, ObjectFactory objectFactory) {
+	public Object get(String name, ObjectFactory<?> objectFactory) {
 		JobContext context = getContext();
 		Object scopedObject = context.getAttribute(name);
 
@@ -99,7 +98,9 @@ public class JobScope extends BatchScopeSupport {
 				scopedObject = context.getAttribute(name);
 				if (scopedObject == null) {
 
-					logger.debug(String.format("Creating object in scope=%s, name=%s", this.getName(), name));
+					if (logger.isDebugEnabled()) {
+						logger.debug(String.format("Creating object in scope=%s, name=%s", this.getName(), name));
+					}
 
 					scopedObject = objectFactory.getObject();
 					context.setAttribute(name, scopedObject);
@@ -127,7 +128,9 @@ public class JobScope extends BatchScopeSupport {
 	@Override
 	public void registerDestructionCallback(String name, Runnable callback) {
 		JobContext context = getContext();
-		logger.debug(String.format("Registered destruction callback in scope=%s, name=%s", this.getName(), name));
+		if (logger.isDebugEnabled()) {
+			logger.debug(String.format("Registered destruction callback in scope=%s, name=%s", this.getName(), name));
+		}
 		context.registerDestructionCallback(name, callback);
 	}
 
@@ -137,7 +140,9 @@ public class JobScope extends BatchScopeSupport {
 	@Override
 	public Object remove(String name) {
 		JobContext context = getContext();
-		logger.debug(String.format("Removing from scope=%s, name=%s", this.getName(), name));
+		if (logger.isDebugEnabled()) {
+			logger.debug(String.format("Removing from scope=%s, name=%s", this.getName(), name));
+		}
 		return context.removeAttribute(name);
 	}
 

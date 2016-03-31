@@ -22,8 +22,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.util.Assert;
-
 /**
  * Object representing a context for an {@link ItemStream}. It is a thin wrapper
  * for a map that allows optionally for type safety on reads. It also allows for
@@ -117,15 +115,14 @@ public class ExecutionContext implements Serializable {
 	}
 
 	/**
-	 * Add an Object value to the context (must be Serializable). Putting
-	 * <code>null</code> value for a given key removes the key.
+	 * Add an Object value to the context. Putting <code>null</code>
+	 * value for a given key removes the key.
 	 *
 	 * @param key Key to add to context
 	 * @param value Value to associate with key
 	 */
 	public void put(String key, Object value) {
 		if (value != null) {
-			Assert.isInstanceOf(Serializable.class, value, "Value: [ " + value + "must be serializable.");
 			Object result = map.put(key, value);
 			dirty = result==null || result!=null && !result.equals(value);
 		}
@@ -163,7 +160,7 @@ public class ExecutionContext implements Serializable {
 	 *
 	 * @param key The key to get a value for
 	 * @param defaultString Default to return if key is not represented
-	 * @return The <code>String</code> value if key is repreesnted, specified
+	 * @return The <code>String</code> value if key is represented, specified
 	 * default otherwise
 	 */
 	public String getString(String key, String defaultString) {

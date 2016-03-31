@@ -29,6 +29,7 @@ import javax.sql.DataSource;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.springframework.batch.repeat.RepeatCallback;
 import org.springframework.batch.repeat.RepeatContext;
 import org.springframework.batch.repeat.RepeatStatus;
@@ -41,6 +42,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jms.connection.SessionProxy;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.SessionCallback;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.transaction.BeforeTransaction;
@@ -51,6 +53,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/org/springframework/batch/jms/jms-context.xml")
+@DirtiesContext
 public class SynchronousTests implements ApplicationContextAware {
 
 	@Autowired
@@ -66,6 +69,9 @@ public class SynchronousTests implements ApplicationContextAware {
 
 	private ApplicationContext applicationContext;
 
+	private List<String> list = new ArrayList<String>();
+
+	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.applicationContext = applicationContext;
 	}
@@ -89,11 +95,9 @@ public class SynchronousTests implements ApplicationContextAware {
 	}
 
 	private void assertInitialState() {
-		int count = jdbcTemplate.queryForInt("select count(*) from T_BARS");
+		int count = jdbcTemplate.queryForObject("select count(*) from T_BARS", Integer.class);
 		assertEquals(0, count);
 	}
-
-	List<String> list = new ArrayList<String>();
 
 	@Transactional
 	@Test
@@ -102,6 +106,7 @@ public class SynchronousTests implements ApplicationContextAware {
 		assertInitialState();
 
 		repeatTemplate.iterate(new RepeatCallback() {
+			@Override
 			public RepeatStatus doInIteration(RepeatContext context) throws Exception {
 				String text = (String) jmsTemplate.receiveAndConvert("queue");
 				list.add(text);
@@ -110,8 +115,11 @@ public class SynchronousTests implements ApplicationContextAware {
 			}
 		});
 
-		int count = jdbcTemplate.queryForInt("select count(*) from T_BARS");
+		int count = jdbcTemplate.queryForObject("select count(*) from T_BARS", Integer.class);
 		assertEquals(2, count);
+
+		assertTrue(list.contains("foo"));
+		assertTrue(list.contains("bar"));
 
 		String text = (String) jmsTemplate.receiveAndConvert("queue");
 		assertEquals(null, text);
@@ -121,11 +129,15 @@ public class SynchronousTests implements ApplicationContextAware {
 	@Test
 	public void testFullRollback() throws Exception {
 
+		onSetUpBeforeTransaction();
+
 		assertInitialState();
 
-		new TransactionTemplate(transactionManager).execute(new TransactionCallback() {
-			public Object doInTransaction(org.springframework.transaction.TransactionStatus status) {
+		new TransactionTemplate(transactionManager).execute(new TransactionCallback<Void>() {
+			@Override
+			public Void doInTransaction(org.springframework.transaction.TransactionStatus status) {
 				repeatTemplate.iterate(new RepeatCallback() {
+					@Override
 					public RepeatStatus doInIteration(RepeatContext context) throws Exception {
 						String text = (String) jmsTemplate.receiveAndConvert("queue");
 						list.add(text);
@@ -147,7 +159,7 @@ public class SynchronousTests implements ApplicationContextAware {
 		}
 
 		// The database portion rolled back...
-		int count = jdbcTemplate.queryForInt("select count(*) from T_BARS");
+		int count = jdbcTemplate.queryForObject("select count(*) from T_BARS", Integer.class);
 		assertEquals(0, count);
 
 		// ... and so did the message session. The rollback should have restored
@@ -155,7 +167,8 @@ public class SynchronousTests implements ApplicationContextAware {
 		assertTrue("Foo not on queue", msgs.contains("foo"));
 	}
 
-	@Transactional @Test
+	@Transactional
+	@Test
 	public void testPartialRollback() throws Exception {
 
 		// The JmsTemplate is used elsewhere outside a transaction, so
@@ -167,10 +180,12 @@ public class SynchronousTests implements ApplicationContextAware {
 
 		assertInitialState();
 
-		new TransactionTemplate(transactionManager).execute(new TransactionCallback() {
-			public Object doInTransaction(org.springframework.transaction.TransactionStatus status) {
+		new TransactionTemplate(transactionManager).execute(new TransactionCallback<Void>() {
+			@Override
+			public Void doInTransaction(org.springframework.transaction.TransactionStatus status) {
 
 				repeatTemplate.iterate(new RepeatCallback() {
+					@Override
 					public RepeatStatus doInIteration(RepeatContext context) throws Exception {
 						String text = (String) txJmsTemplate.receiveAndConvert("queue");
 						list.add(text);
@@ -181,8 +196,9 @@ public class SynchronousTests implements ApplicationContextAware {
 
 				// Simulate a message system failure before the main transaction
 				// commits...
-				txJmsTemplate.execute(new SessionCallback() {
-					public Object doInJms(Session session) throws JMSException {
+				txJmsTemplate.execute(new SessionCallback<Void>() {
+					@Override
+					public Void doInJms(Session session) throws JMSException {
 						try {
 							assertTrue("Not a SessionProxy - wrong spring version?", session instanceof SessionProxy);
 							((SessionProxy) session).getTargetSession().rollback();
@@ -210,7 +226,7 @@ public class SynchronousTests implements ApplicationContextAware {
 		}
 
 		// The database portion committed...
-		int count = jdbcTemplate.queryForInt("select count(*) from T_BARS");
+		int count = jdbcTemplate.queryForObject("select count(*) from T_BARS", Integer.class);
 		assertEquals(2, count);
 
 		// ...but the JMS session rolled back, so the message is still there

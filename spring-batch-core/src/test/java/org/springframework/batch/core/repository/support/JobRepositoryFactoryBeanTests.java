@@ -15,10 +15,10 @@
  */
 package org.springframework.batch.core.repository.support;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -225,7 +225,7 @@ public class JobRepositoryFactoryBeanTests {
 		catch (IllegalArgumentException ex) {
 			// expected
 			String message = ex.getMessage();
-			assertTrue("Wrong message: " + message, message.indexOf("DataSource") >= 0);
+			assertTrue("Wrong message: " + message, message.contains("DataSource"));
 		}
 
 	}
@@ -245,7 +245,7 @@ public class JobRepositoryFactoryBeanTests {
 		catch (IllegalArgumentException ex) {
 			// expected
 			String message = ex.getMessage();
-			assertTrue("Wrong message: " + message, message.indexOf("TransactionManager") >= 0);
+			assertTrue("Wrong message: " + message, message.contains("TransactionManager"));
 		}
 
 	}
@@ -263,7 +263,7 @@ public class JobRepositoryFactoryBeanTests {
 		catch (IllegalArgumentException ex) {
 			// expected
 			String message = ex.getMessage();
-			assertTrue("Wrong message: " + message, message.indexOf("foo") >= 0);
+			assertTrue("Wrong message: " + message, message.contains("foo"));
 		}
 
 	}
@@ -287,7 +287,7 @@ public class JobRepositoryFactoryBeanTests {
 	@Test
 	public void testTransactionAttributesForCreateMethodNullHypothesis() throws Exception {
 		testCreateRepository();
-		JobRepository repository = (JobRepository) factory.getObject();
+		JobRepository repository = factory.getObject();
 		DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition(
 				DefaultTransactionDefinition.PROPAGATION_REQUIRES_NEW);
 		when(transactionManager.getTransaction(transactionDefinition)).thenReturn(null);
@@ -309,7 +309,7 @@ public class JobRepositoryFactoryBeanTests {
 	public void testTransactionAttributesForCreateMethod() throws Exception {
 
 		testCreateRepository();
-		JobRepository repository = (JobRepository) factory.getObject();
+		JobRepository repository = factory.getObject();
 		DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition(
 				DefaultTransactionDefinition.PROPAGATION_REQUIRES_NEW);
 		transactionDefinition.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_SERIALIZABLE);
@@ -334,7 +334,7 @@ public class JobRepositoryFactoryBeanTests {
 
 		factory.setIsolationLevelForCreate("ISOLATION_READ_UNCOMMITTED");
 		testCreateRepository();
-		JobRepository repository = (JobRepository) factory.getObject();
+		JobRepository repository = factory.getObject();
 		DefaultTransactionDefinition transactionDefinition = new DefaultTransactionDefinition(
 				DefaultTransactionDefinition.PROPAGATION_REQUIRES_NEW);
 		transactionDefinition.setIsolationLevel(DefaultTransactionDefinition.ISOLATION_READ_UNCOMMITTED);
@@ -363,7 +363,7 @@ public class JobRepositoryFactoryBeanTests {
 	public void testCustomLobType() throws Exception {
 		factory.setClobType(Types.ARRAY);
 		testCreateRepository();
-		JobRepository repository = (JobRepository) factory.getObject();
+		JobRepository repository = factory.getObject();
 		assertNotNull(repository);
 	}
 

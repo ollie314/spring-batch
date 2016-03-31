@@ -30,6 +30,7 @@ import java.util.Set;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
@@ -45,6 +46,8 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.NoSuchJobException;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.step.JobRepositorySupport;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -118,7 +121,7 @@ public class CommandLineJobRunnerTests {
 		CommandLineJobRunner.main(args);
 		assertEquals(1, StubSystemExiter.status);
 		String errorMessage = CommandLineJobRunner.getErrorMessage();
-		assertTrue("Wrong error message: " + errorMessage, errorMessage.contains("Config locations must not be null"));
+		assertTrue("Wrong error message: " + errorMessage, errorMessage.contains("At least 2 arguments are required: JobPath/JobClass and jobIdentifier."));
 	}
 
 	@Test
@@ -161,6 +164,28 @@ public class CommandLineJobRunnerTests {
 	public void testWithStdinCommandLine() throws Throwable {
 		System.setIn(new InputStream() {
 			char[] input = (jobPath+"\n"+jobName+"\nfoo=bar\nspam=bucket").toCharArray();
+
+			int index = 0;
+
+			@Override
+			public int available() {
+				return input.length - index;
+			}
+
+			@Override
+			public int read() {
+				return index<input.length-1 ? (int) input[index++] : -1;
+			}
+		});
+		CommandLineJobRunner.main(new String[0]);
+		assertEquals(0, StubSystemExiter.status);
+		assertEquals(2, StubJobLauncher.jobParameters.getParameters().size());
+	}
+        
+	@Test
+	public void testWithStdinCommandLineWithEmptyLines() throws Throwable {
+		System.setIn(new InputStream() {
+			char[] input = (jobPath+"\n"+jobName+"\nfoo=bar\n\nspam=bucket\n\n").toCharArray();
 
 			int index = 0;
 
@@ -355,6 +380,19 @@ public class CommandLineJobRunnerTests {
 		assertTrue(StubJobLauncher.destroyed);
 	}
 
+	@Test
+	public void testJavaConfig() throws Exception {
+		String[] args =
+				new String[] { "org.springframework.batch.core.launch.support.CommandLineJobRunnerTests$Configuration1",
+								"invalidJobName"};
+		CommandLineJobRunner.presetSystemExiter(new StubSystemExiter());
+		CommandLineJobRunner.main(args);
+		assertEquals(1, StubSystemExiter.status);
+		String errorMessage = CommandLineJobRunner.getErrorMessage();
+		assertTrue("Wrong error message: " + errorMessage,
+						  errorMessage.contains("A JobLauncher must be provided.  Please add one to the configuration."));
+	}
+
 	public static class StubSystemExiter implements SystemExiter {
 
 		private static int status;
@@ -487,6 +525,11 @@ public class CommandLineJobRunnerTests {
 		}
 
 		@Override
+		public List<JobInstance> findJobInstancesByJobName(String jobName, int start, int count) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
 		public int getJobInstanceCount(String jobName)
 				throws NoSuchJobException {
 			int count = 0;
@@ -523,6 +566,14 @@ public class CommandLineJobRunnerTests {
 			throw new UnsupportedOperationException();
 		}
 
+	}
+
+	@Configuration
+	public static class Configuration1 {
+		@Bean
+		public String bean1() {
+			return "bean1";
+		}
 	}
 
 }

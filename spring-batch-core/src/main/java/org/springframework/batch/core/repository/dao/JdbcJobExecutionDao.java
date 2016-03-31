@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
@@ -40,7 +41,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.RowCallbackHandler;
-import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.incrementer.DataFieldMaxValueIncrementer;
 import org.springframework.util.Assert;
 
@@ -202,7 +203,9 @@ public class JdbcJobExecutionDao extends AbstractJdbcBatchMetadataDao implements
 			String exitDescription = jobExecution.getExitStatus().getExitDescription();
 			if (exitDescription != null && exitDescription.length() > exitMessageLength) {
 				exitDescription = exitDescription.substring(0, exitMessageLength);
-				logger.debug("Truncating long message before update of JobExecution: " + jobExecution);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Truncating long message before update of JobExecution: " + jobExecution);
+				}
 			}
 			Object[] parameters = new Object[] { jobExecution.getStartTime(), jobExecution.getEndTime(),
 					jobExecution.getStatus().toString(), jobExecution.getExitStatus().getExitCode(), exitDescription,
@@ -213,7 +216,7 @@ public class JdbcJobExecutionDao extends AbstractJdbcBatchMetadataDao implements
 			// it
 			// is invalid and
 			// an exception should be thrown.
-			if (getJdbcTemplate().queryForInt(getQuery(CHECK_JOB_EXECUTION_EXISTS),
+			if (getJdbcTemplate().queryForObject(getQuery(CHECK_JOB_EXECUTION_EXISTS), Integer.class,
 					new Object[] { jobExecution.getId() }) != 1) {
 				throw new NoSuchObjectException("Invalid JobExecution, ID " + jobExecution.getId() + " not found.");
 			}
@@ -226,7 +229,7 @@ public class JdbcJobExecutionDao extends AbstractJdbcBatchMetadataDao implements
 
 			// Avoid concurrent modifications...
 			if (count == 0) {
-				int curentVersion = getJdbcTemplate().queryForInt(getQuery(CURRENT_VERSION_JOB_EXECUTION),
+				int curentVersion = getJdbcTemplate().queryForObject(getQuery(CURRENT_VERSION_JOB_EXECUTION), Integer.class,
 						new Object[] { jobExecution.getId() });
 				throw new OptimisticLockingFailureException("Attempt to update job execution id="
 						+ jobExecution.getId() + " with wrong version (" + jobExecution.getVersion()
@@ -297,7 +300,7 @@ public class JdbcJobExecutionDao extends AbstractJdbcBatchMetadataDao implements
 
 	@Override
 	public void synchronizeStatus(JobExecution jobExecution) {
-		int currentVersion = getJdbcTemplate().queryForInt(getQuery(CURRENT_VERSION_JOB_EXECUTION),
+		int currentVersion = getJdbcTemplate().queryForObject(getQuery(CURRENT_VERSION_JOB_EXECUTION), Integer.class,
 				jobExecution.getId());
 
 		if (currentVersion != jobExecution.getVersion().intValue()) {
@@ -390,7 +393,7 @@ public class JdbcJobExecutionDao extends AbstractJdbcBatchMetadataDao implements
 	 * @author Dave Syer
 	 *
 	 */
-	private final class JobExecutionRowMapper implements ParameterizedRowMapper<JobExecution> {
+	private final class JobExecutionRowMapper implements RowMapper<JobExecution> {
 
 		private JobInstance jobInstance;
 

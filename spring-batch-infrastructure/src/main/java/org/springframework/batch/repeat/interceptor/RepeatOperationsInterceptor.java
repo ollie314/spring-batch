@@ -47,7 +47,7 @@ public class RepeatOperationsInterceptor implements MethodInterceptor {
 	/**
 	 * Setter for the {@link RepeatOperations}.
 	 * 
-	 * @param batchTempate
+	 * @param batchTempate template to be used
 	 * @throws IllegalArgumentException if the argument is null.
 	 */
 	public void setRepeatOperations(RepeatOperations batchTempate) {
@@ -144,6 +144,7 @@ public class RepeatOperationsInterceptor implements MethodInterceptor {
 	 * @author Dave Syer
 	 * 
 	 */
+	@SuppressWarnings("serial")
 	private static class RepeatOperationsInterceptorException extends RepeatException {
 		/**
 		 * @param message

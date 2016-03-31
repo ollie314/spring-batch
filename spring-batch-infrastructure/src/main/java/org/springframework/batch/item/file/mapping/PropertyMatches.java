@@ -16,18 +16,18 @@
 
 package org.springframework.batch.item.file.mapping;
 
+import org.springframework.beans.BeanUtils;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
+
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.springframework.beans.BeanUtils;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
-
 /**
  * Helper class for calculating bean property matches, according to.
- * Used by BeanWrapperImpl to suggest alternatives for an invalid property name.<br/>
+ * Used by BeanWrapperImpl to suggest alternatives for an invalid property name.<br>
  * 
  * Copied and slightly modified from Spring core,
  *
@@ -99,7 +99,7 @@ final class PropertyMatches {
 	 * indicating the possible property matches.
 	 */
 	public String buildErrorMessage() {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		buf.append("Bean property '");
 		buf.append(this.propertyName);
 		buf.append("' is not writable or has an invalid setter method. ");

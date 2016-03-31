@@ -62,7 +62,7 @@ public class JobLauncherDetails extends QuartzJobBean {
 		this.jobLauncher = jobLauncher;
 	}
 
-	@SuppressWarnings("unchecked")
+	@Override
 	protected void executeInternal(JobExecutionContext context) {
 		Map<String, Object> jobDataMap = context.getMergedJobDataMap();
 		String jobName = (String) jobDataMap.get(JOB_NAME);

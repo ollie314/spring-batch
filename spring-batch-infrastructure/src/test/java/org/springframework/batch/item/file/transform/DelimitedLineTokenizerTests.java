@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2012 the original author or authors.
+ * Copyright 2006-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.batch.item.file.transform;
 
+import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import org.junit.Test;
 
 
 public class DelimitedLineTokenizerTests {
@@ -81,6 +81,7 @@ public class DelimitedLineTokenizerTests {
 		catch (IncorrectTokenCountException e) {
 			assertEquals(2, e.getExpectedCount());
 			assertEquals(3, e.getActualCount());
+			assertEquals("a,b,c", e.getInput());
 		}
 	}
 
@@ -104,6 +105,7 @@ public class DelimitedLineTokenizerTests {
 		catch(IncorrectTokenCountException e){
 			assertEquals(4, e.getExpectedCount());
 			assertEquals(3, e.getActualCount());
+			assertEquals("a,b,c", e.getInput());
 		}
 
 	}
@@ -128,7 +130,20 @@ public class DelimitedLineTokenizerTests {
 		FieldSet line = tokenizer.tokenize("a b c");
 		assertEquals(3, line.getFieldCount());
 	}
-
+	
+	@Test(expected=IllegalArgumentException.class)
+	public void testDelimitedLineTokenizerNullDelimiter() {
+		AbstractLineTokenizer tokenizer = new DelimitedLineTokenizer(null);
+		tokenizer.tokenize("a b c");
+	}
+	
+	@Test(expected=IllegalStateException.class)
+	public void testDelimitedLineTokenizerEmptyString() throws Exception {
+		DelimitedLineTokenizer tokenizer = new DelimitedLineTokenizer("");
+		tokenizer.afterPropertiesSet();
+		tokenizer.tokenize("a b c");
+	}
+	
 	@Test
 	public void testDelimitedLineTokenizerString() {
 		AbstractLineTokenizer tokenizer = new DelimitedLineTokenizer(" b ");
@@ -279,6 +294,7 @@ public class DelimitedLineTokenizerTests {
 		catch(IncorrectTokenCountException ex){
 			assertEquals(2, ex.getExpectedCount());
 			assertEquals(0, ex.getActualCount());
+			assertEquals("", ex.getInput());
 		}
 	}
 
@@ -360,6 +376,14 @@ public class DelimitedLineTokenizerTests {
 		FieldSet line = tokenizer.tokenize("\"a\",\"b\",\"c\",\"d\"");
 		assertEquals(2, line.getFieldCount());
 		assertEquals("c", line.readString("bar"));
+	}
+
+	@Test
+	public void testTokenizeOverMultipleLines() {
+		tokenizer = new DelimitedLineTokenizer(";");
+		FieldSet line = tokenizer.tokenize("value1;\"value2\nvalue2cont\";value3;value4");
+		assertEquals(4, line.getFieldCount());
+		assertEquals("value2\nvalue2cont", line.readString(1));
 	}
 
 }

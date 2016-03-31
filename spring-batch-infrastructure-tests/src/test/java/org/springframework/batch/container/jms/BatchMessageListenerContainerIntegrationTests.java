@@ -34,14 +34,16 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.retry.RecoveryCallback;
 import org.springframework.retry.RetryCallback;
 import org.springframework.retry.RetryContext;
 import org.springframework.retry.policy.NeverRetryPolicy;
 import org.springframework.retry.support.DefaultRetryState;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jms.core.JmsTemplate;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -51,6 +53,7 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "/org/springframework/batch/jms/jms-context.xml")
+@DirtiesContext
 public class BatchMessageListenerContainerIntegrationTests {
 
 	@Autowired
@@ -86,6 +89,7 @@ public class BatchMessageListenerContainerIntegrationTests {
 	@Test
 	public void testSendAndReceive() throws Exception {
 		container.setMessageListener(new MessageListener() {
+			@Override
 			public void onMessage(Message msg) {
 				try {
 					processed.add(((TextMessage) msg).getText());
@@ -109,6 +113,7 @@ public class BatchMessageListenerContainerIntegrationTests {
 	@Test
 	public void testFailureAndRepresent() throws Exception {
 		container.setMessageListener(new MessageListener() {
+			@Override
 			public void onMessage(Message msg) {
 				try {
 					processed.add(((TextMessage) msg).getText());
@@ -132,9 +137,11 @@ public class BatchMessageListenerContainerIntegrationTests {
 		final RetryTemplate retryTemplate = new RetryTemplate();
 		retryTemplate.setRetryPolicy(new NeverRetryPolicy());
 		container.setMessageListener(new MessageListener() {
+			@Override
 			public void onMessage(final Message msg) {
 				try {
-					RetryCallback<Message> callback = new RetryCallback<Message>() {
+					RetryCallback<Message, Exception> callback = new RetryCallback<Message, Exception>() {
+						@Override
 						public Message doWithRetry(RetryContext context) throws Exception {
 							try {
 								processed.add(((TextMessage) msg).getText());
@@ -146,6 +153,7 @@ public class BatchMessageListenerContainerIntegrationTests {
 						}
 					};
 					RecoveryCallback<Message> recoveryCallback = new RecoveryCallback<Message>() {
+						@Override
 						public Message recover(RetryContext context) {
 							try {
 								recovered.add(((TextMessage) msg).getText());

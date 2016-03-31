@@ -1,7 +1,22 @@
+/*
+ * Copyright 2008-2014 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.batch.item.file;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -12,8 +27,12 @@ import java.util.Comparator;
 
 import org.junit.Before;
 import org.junit.Test;
+
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.item.NonTransientResourceException;
+import org.springframework.batch.item.ParseException;
+import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.batch.item.file.mapping.PassThroughLineMapper;
 import org.springframework.core.io.AbstractResource;
 import org.springframework.core.io.ByteArrayResource;
@@ -229,8 +248,8 @@ public class MultiResourceItemReaderIntegrationTests {
 			 */
             @Override
 			public int compare(Resource o1, Resource o2) {
-				Resource r1 = (Resource) o1;
-				Resource r2 = (Resource) o2;
+				Resource r1 = o1;
+				Resource r2 = o2;
 				return -r1.getDescription().compareTo(r2.getDescription());
 			}
 
@@ -275,11 +294,30 @@ public class MultiResourceItemReaderIntegrationTests {
 	}
 
 	/**
+	 * Test {@link org.springframework.batch.item.ItemStream} lifecycle symmetry
+	 */
+	@Test
+	public void testNonExistentResourcesItemStreamLifecycle() throws Exception {
+		ItemStreamReaderImpl delegate = new ItemStreamReaderImpl();
+		tested.setDelegate(delegate);
+		tested.setResources(new Resource[] { });
+		itemReader.setStrict(false);
+		tested.open(new ExecutionContext());
+
+		assertNull(tested.read());
+		assertFalse(delegate.openCalled);
+		assertFalse(delegate.closeCalled);
+		assertFalse(delegate.updateCalled);
+
+		tested.close();
+	}
+
+	/**
 	 * Directory resource behaves as if it was empty.
 	 */
 	@Test
 	public void testDirectoryResources() throws Exception {
-		FileSystemResource resource = new FileSystemResource("target/data");
+		FileSystemResource resource = new FileSystemResource("build/data");
 		resource.getFile().mkdirs();
 		assertTrue(resource.getFile().isDirectory());
 		tested.setResources(new Resource[] { resource });
@@ -441,4 +479,34 @@ public class MultiResourceItemReaderIntegrationTests {
 		assertEquals("1", tested.read());
 	}
 
+	private static class ItemStreamReaderImpl implements ResourceAwareItemReaderItemStream<String> {
+
+		private boolean openCalled = false;
+		private boolean updateCalled = false;
+		private boolean closeCalled = false;
+
+		@Override
+		public String read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
+			return null;
+		}
+
+		@Override
+		public void open(ExecutionContext executionContext) throws ItemStreamException {
+			openCalled = true;
+		}
+
+		@Override
+		public void update(ExecutionContext executionContext) throws ItemStreamException {
+			updateCalled = true;
+		}
+
+		@Override
+		public void close() throws ItemStreamException {
+			closeCalled = true;
+		}
+
+		@Override
+		public void setResource(Resource resource) {
+		}
+	}
 }

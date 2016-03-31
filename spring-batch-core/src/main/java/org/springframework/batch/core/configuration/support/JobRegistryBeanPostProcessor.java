@@ -106,14 +106,16 @@ DisposableBean {
 	}
 
 	/**
-	 * De-register all the {@link Job} instances that were regsistered by this
+	 * Unregister all the {@link Job} instances that were registered by this
 	 * post processor.
 	 * @see org.springframework.beans.factory.DisposableBean#destroy()
 	 */
 	@Override
 	public void destroy() throws Exception {
 		for (String name : jobNames) {
-			logger.debug("Unregistering job: " + name);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Unregistering job: " + name);
+			}
 			jobRegistry.unregister(name);
 		}
 		jobNames.clear();
@@ -138,7 +140,9 @@ DisposableBean {
 				job = groupName==null ? job : new GroupAwareJob(groupName, job);
 				ReferenceJobFactory jobFactory = new ReferenceJobFactory(job);
 				String name = jobFactory.getJobName();
-				logger.debug("Registering job: " + name);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Registering job: " + name);
+				}
 				jobRegistry.register(jobFactory);
 				jobNames.add(name);
 			}

@@ -180,7 +180,9 @@ public abstract class AbstractStep implements Step, InitializingBean, BeanNameAw
 	public final void execute(StepExecution stepExecution) throws JobInterruptedException,
 	UnexpectedJobExecutionException {
 
-		logger.debug("Executing: id=" + stepExecution.getId());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Executing: id=" + stepExecution.getId());
+		}
 		stepExecution.setStartTime(new Date());
 		stepExecution.setStatus(BatchStatus.STARTED);
 		getJobRepository().update(stepExecution);
@@ -209,20 +211,22 @@ public abstract class AbstractStep implements Step, InitializingBean, BeanNameAw
 
 			// Need to upgrade here not set, in case the execution was stopped
 			stepExecution.upgradeStatus(BatchStatus.COMPLETED);
-			logger.debug("Step execution success: id=" + stepExecution.getId());
+			if (logger.isDebugEnabled()) {
+				logger.debug("Step execution success: id=" + stepExecution.getId());
+			}
 		}
 		catch (Throwable e) {
 			stepExecution.upgradeStatus(determineBatchStatus(e));
 			exitStatus = exitStatus.and(getDefaultExitStatusForFailure(e));
 			stepExecution.addFailureException(e);
 			if (stepExecution.getStatus() == BatchStatus.STOPPED) {
-				logger.info("Encountered interruption executing step: " + e.getMessage());
+				logger.info(String.format("Encountered interruption executing step %s in job %s : %s", name, stepExecution.getJobExecution().getJobInstance().getJobName(), e.getMessage()));
 				if (logger.isDebugEnabled()) {
 					logger.debug("Full exception", e);
 				}
 			}
 			else {
-				logger.error("Encountered an error executing the step", e);
+				logger.error(String.format("Encountered an error executing step %s in job %s", name, stepExecution.getJobExecution().getJobInstance().getJobName()), e);
 			}
 		}
 		finally {
@@ -235,7 +239,7 @@ public abstract class AbstractStep implements Step, InitializingBean, BeanNameAw
 				exitStatus = exitStatus.and(getCompositeListener().afterStep(stepExecution));
 			}
 			catch (Exception e) {
-				logger.error("Exception in afterStep callback", e);
+				logger.error(String.format("Exception in afterStep callback in step %s in job %s", name, stepExecution.getJobExecution().getJobInstance().getJobName()), e);
 			}
 
 			try {
@@ -245,8 +249,8 @@ public abstract class AbstractStep implements Step, InitializingBean, BeanNameAw
 				stepExecution.setStatus(BatchStatus.UNKNOWN);
 				exitStatus = exitStatus.and(ExitStatus.UNKNOWN);
 				stepExecution.addFailureException(e);
-				logger.error("Encountered an error saving batch meta data. "
-						+ "This job is now in an unknown state and should not be restarted.", e);
+				logger.error(String.format("Encountered an error saving batch meta data for step %s in job %s. "
+						+ "This job is now in an unknown state and should not be restarted.", name, stepExecution.getJobExecution().getJobInstance().getJobName()), e);
 			}
 
 			stepExecution.setEndTime(new Date());
@@ -259,21 +263,23 @@ public abstract class AbstractStep implements Step, InitializingBean, BeanNameAw
 				stepExecution.setStatus(BatchStatus.UNKNOWN);
 				stepExecution.setExitStatus(exitStatus.and(ExitStatus.UNKNOWN));
 				stepExecution.addFailureException(e);
-				logger.error("Encountered an error saving batch meta data. "
-						+ "This job is now in an unknown state and should not be restarted.", e);
+				logger.error(String.format("Encountered an error saving batch meta data for step %s in job %s. "
+						+ "This job is now in an unknown state and should not be restarted.", name, stepExecution.getJobExecution().getJobInstance().getJobName()), e);
 			}
 
 			try {
 				close(stepExecution.getExecutionContext());
 			}
 			catch (Exception e) {
-				logger.error("Exception while closing step execution resources", e);
+				logger.error(String.format("Exception while closing step execution resources in step %s in job %s", name, stepExecution.getJobExecution().getJobInstance().getJobName()), e);
 				stepExecution.addFailureException(e);
 			}
 
 			doExecutionRelease();
 
-			logger.debug("Step execution complete: " + stepExecution.getSummary());
+			if (logger.isDebugEnabled()) {
+				logger.debug("Step execution complete: " + stepExecution.getSummary());
+			}
 		}
 	}
 

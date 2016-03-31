@@ -15,23 +15,11 @@
  */
 package org.springframework.batch.core.jsr.configuration.xml;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.springframework.batch.core.jsr.JsrTestUtils.runJob;
-
-import java.util.List;
-
-import javax.batch.api.AbstractBatchlet;
-import javax.batch.runtime.BatchRuntime;
-import javax.batch.runtime.StepExecution;
-import javax.batch.runtime.context.JobContext;
-import javax.inject.Inject;
-
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.springframework.batch.core.jsr.AbstractJsrTestCase;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.parsing.BeanDefinitionParsingException;
@@ -39,14 +27,25 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
-public class JsrSplitParsingTests {
+import javax.batch.api.AbstractBatchlet;
+import javax.batch.runtime.BatchRuntime;
+import javax.batch.runtime.StepExecution;
+import javax.batch.runtime.context.JobContext;
+import javax.inject.Inject;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+public class JsrSplitParsingTests extends AbstractJsrTestCase {
 
 	@Rule
 	public ExpectedException expectedException = ExpectedException.none();
 
 	@Test
 	public void test() throws Exception {
-		javax.batch.runtime.JobExecution execution = runJob("JsrSplitParsingTests-context", null, 10000l);
+		javax.batch.runtime.JobExecution execution = runJob("JsrSplitParsingTests-context", null, 10000L);
 		assertEquals(javax.batch.runtime.BatchStatus.COMPLETED, execution.getBatchStatus());
 		assertEquals("COMPLETED", execution.getExitStatus());
 

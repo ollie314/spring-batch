@@ -55,7 +55,6 @@ import org.springframework.util.ClassUtils;
  *
  * @author Thomas Risberg
  */
-@SuppressWarnings("rawtypes")
 public class StoredProcedureItemReader<T> extends AbstractCursorItemReader<T> {
 
 	private CallableStatement callableStatement;
@@ -66,7 +65,7 @@ public class StoredProcedureItemReader<T> extends AbstractCursorItemReader<T> {
 
 	private String callString;
 
-	private RowMapper rowMapper;
+	private RowMapper<T> rowMapper;
 
 	private SqlParameter[] parameters = new SqlParameter[0];
 
@@ -84,7 +83,7 @@ public class StoredProcedureItemReader<T> extends AbstractCursorItemReader<T> {
 	 *
 	 * @param rowMapper
 	 */
-	public void setRowMapper(RowMapper rowMapper) {
+	public void setRowMapper(RowMapper<T> rowMapper) {
 		this.rowMapper = rowMapper;
 	}
 
@@ -140,7 +139,7 @@ public class StoredProcedureItemReader<T> extends AbstractCursorItemReader<T> {
 	/**
 	 * Assert that mandatory properties are set.
 	 *
-	 * @throws IllegalArgumentException if either data source or sql properties
+	 * @throws IllegalArgumentException if either data source or SQL properties
 	 * not set.
 	 */
 	@Override
@@ -170,7 +169,10 @@ public class StoredProcedureItemReader<T> extends AbstractCursorItemReader<T> {
 		SqlParameter cursorParameter = callContext.createReturnResultSetParameter("cursor", rowMapper);
 		this.callString = callContext.createCallString();
 
-		log.debug("Call string is: " + callString);
+
+		if (log.isDebugEnabled()) {
+			log.debug("Call string is: " + callString);
+		}
 
 		int cursorSqlType = Types.OTHER;
 		if (function) {
@@ -227,9 +229,8 @@ public class StoredProcedureItemReader<T> extends AbstractCursorItemReader<T> {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	protected T readCursor(ResultSet rs, int currentRow) throws SQLException {
-		return (T) rowMapper.mapRow(rs, currentRow);
+		return rowMapper.mapRow(rs, currentRow);
 	}
 
 	/**

@@ -50,7 +50,7 @@ import org.springframework.util.StringUtils;
  * wrapped with StartDocument and EndDocument events so that the fragments can be further processed like standalone XML
  * documents.
  * 
- * The implementation is *not* thread-safe.
+ * The implementation is <b>not</b> thread-safe.
  * 
  * @author Robert Kasanicky
  */
@@ -128,10 +128,9 @@ ResourceAwareItemReaderItemStream<T>, InitializingBean {
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		Assert.notNull(unmarshaller, "The Unmarshaller must not be null.");
-		Assert.notNull(fragmentRootElementNames, "The FragmentRootElementNames must not be null");
-		Assert.notNull(fragmentRootElementNames, "The FragmentRootElementNames must not be empty");
+		Assert.notEmpty(fragmentRootElementNames, "The FragmentRootElementNames must not be empty");
 		for (QName fragmentRootElementName : fragmentRootElementNames) {
-			Assert.hasText(fragmentRootElementName.getLocalPart(), "The FragmentRootElementNames must contain empty elements");
+			Assert.hasText(fragmentRootElementName.getLocalPart(), "The FragmentRootElementNames must not contain empty elements");
 		}		
 	}
 

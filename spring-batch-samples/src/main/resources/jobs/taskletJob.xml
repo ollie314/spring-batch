@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch-2.2.xsd
+	xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd"
 	xmlns:p="http://www.springframework.org/schema/p">
 
@@ -27,6 +27,13 @@
 		class="org.springframework.batch.core.step.tasklet.MethodInvokingTaskletAdapter">
 		<property name="targetObject" ref="value" />
 		<property name="targetMethod" value="execute" />
+		<property name="arguments">
+			<list>
+      			<value>foo2</value>
+      			<value type="int">3</value>
+      			<value type="double">3.14</value>
+   			</list>
+		</property>
 	</bean>
 
 	<bean id="value"
@@ -34,5 +41,4 @@
 		scope="step">
 		<property name="value" value="#{jobParameters[value]}" />
 	</bean>
-
 </beans>

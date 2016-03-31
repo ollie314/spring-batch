@@ -15,8 +15,6 @@
  */
 package org.springframework.batch.core.step.tasklet;
 
-import java.util.concurrent.Semaphore;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.batch.core.BatchStatus;
@@ -53,13 +51,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
+import java.util.concurrent.Semaphore;
+
 /**
  * Simple implementation of executing the step as a call to a {@link Tasklet},
  * possibly repeated, and each call surrounded by a transaction. The structure
  * is therefore that of a loop with transaction boundary inside the loop. The
  * loop is controlled by the step operations (
- * {@link #setStepOperations(RepeatOperations)}).<br/>
- * <br/>
+ * {@link #setStepOperations(RepeatOperations)}).<br>
+ * <br>
  *
  * Clients can use interceptors in the step operations to intercept or listen to
  * the iteration on a step-wide basis, for instance to get a callback when the
@@ -99,6 +99,8 @@ public class TaskletStep extends AbstractStep {
 	};
 
 	private Tasklet tasklet;
+
+	public static final String TASKLET_TYPE_KEY = "batch.taskletType";
 
 	/**
 	 * Default constructor.
@@ -233,7 +235,7 @@ public class TaskletStep extends AbstractStep {
 	 * given an up to date {@link BatchStatus}, and the {@link JobRepository} is
 	 * used to store the result. Various reporting information are also added to
 	 * the current context governing the step execution, which would normally be
-	 * available to the caller through the step's {@link ExecutionContext}.<br/>
+	 * available to the caller through the step's {@link ExecutionContext}.<br>
 	 *
 	 * @throws JobInterruptedException if the step or a chunk is interrupted
 	 * @throws RuntimeException if there is an exception during a chunk
@@ -241,8 +243,9 @@ public class TaskletStep extends AbstractStep {
 	 *
 	 */
 	@Override
-	@SuppressWarnings("unchecked")
 	protected void doExecute(StepExecution stepExecution) throws Exception {
+		stepExecution.getExecutionContext().put(TASKLET_TYPE_KEY, tasklet.getClass().getName());
+		stepExecution.getExecutionContext().put(STEP_TYPE_KEY, this.getClass().getName());
 
 		stream.update(stepExecution.getExecutionContext());
 		getJobRepository().updateExecutionContext(stepExecution);
@@ -265,7 +268,7 @@ public class TaskletStep extends AbstractStep {
 
 				RepeatStatus result;
 				try {
-					result = (RepeatStatus) new TransactionTemplate(transactionManager, transactionAttribute)
+					result = new TransactionTemplate(transactionManager, transactionAttribute)
 					.execute(new ChunkTransactionCallback(chunkContext, semaphore));
 				}
 				catch (UncheckedTransactionException e) {
@@ -324,8 +327,7 @@ public class TaskletStep extends AbstractStep {
 	 * @author Dave Syer
 	 *
 	 */
-	@SuppressWarnings("rawtypes")
-	private class ChunkTransactionCallback extends TransactionSynchronizationAdapter implements TransactionCallback {
+	private class ChunkTransactionCallback extends TransactionSynchronizationAdapter implements TransactionCallback<RepeatStatus> {
 
 		private final StepExecution stepExecution;
 
@@ -383,7 +385,7 @@ public class TaskletStep extends AbstractStep {
 		}
 
 		@Override
-		public Object doInTransaction(TransactionStatus status) {
+		public RepeatStatus doInTransaction(TransactionStatus status) {
 			TransactionSynchronizationManager.registerSynchronization(this);
 
 			RepeatStatus result = RepeatStatus.CONTINUABLE;
@@ -432,7 +434,9 @@ public class TaskletStep extends AbstractStep {
 
 					// Apply the contribution to the step
 					// even if unsuccessful
-					logger.debug("Applying contribution: " + contribution);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Applying contribution: " + contribution);
+					}
 					stepExecution.apply(contribution);
 
 				}
@@ -446,7 +450,9 @@ public class TaskletStep extends AbstractStep {
 					// stay false and we can use that later.
 					getJobRepository().updateExecutionContext(stepExecution);
 					stepExecution.incrementCommitCount();
-					logger.debug("Saving step execution before commit: " + stepExecution);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Saving step execution before commit: " + stepExecution);
+					}
 					getJobRepository().update(stepExecution);
 				}
 				catch (Exception e) {
@@ -458,17 +464,23 @@ public class TaskletStep extends AbstractStep {
 				}
 			}
 			catch (Error e) {
-				logger.debug("Rollback for Error: " + e.getClass().getName() + ": " + e.getMessage());
+				if (logger.isDebugEnabled()) {
+					logger.debug("Rollback for Error: " + e.getClass().getName() + ": " + e.getMessage());
+				}
 				rollback(stepExecution);
 				throw e;
 			}
 			catch (RuntimeException e) {
-				logger.debug("Rollback for RuntimeException: " + e.getClass().getName() + ": " + e.getMessage());
+				if (logger.isDebugEnabled()) {
+					logger.debug("Rollback for RuntimeException: " + e.getClass().getName() + ": " + e.getMessage());
+				}
 				rollback(stepExecution);
 				throw e;
 			}
 			catch (Exception e) {
-				logger.debug("Rollback for Exception: " + e.getClass().getName() + ": " + e.getMessage());
+				if (logger.isDebugEnabled()) {
+					logger.debug("Rollback for Exception: " + e.getClass().getName() + ": " + e.getMessage());
+				}
 				rollback(stepExecution);
 				// Allow checked exceptions
 				throw new UncheckedTransactionException(e);

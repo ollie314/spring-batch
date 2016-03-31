@@ -29,6 +29,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
@@ -36,22 +37,22 @@ import org.springframework.batch.core.StepExecution;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.incrementer.DataFieldMaxValueIncrementer;
 import org.springframework.util.Assert;
 
 /**
- * JDBC implementation of {@link StepExecutionDao}.<br/>
+ * JDBC implementation of {@link StepExecutionDao}.<br>
  *
  * Allows customization of the tables names used by Spring Batch for step meta
- * data via a prefix property.<br/>
+ * data via a prefix property.<br>
  *
  * Uses sequences or tables (via Spring's {@link DataFieldMaxValueIncrementer}
  * abstraction) to create all primary keys before inserting a new row. All
  * objects are checked to ensure all fields to be stored are not null. If any
  * are found to be null, an IllegalArgumentException will be thrown. This could
  * be left to JdbcTemplate, however, the exception will be fairly vague, and
- * fails to highlight which field caused the exception.<br/>
+ * fails to highlight which field caused the exception.<br>
  *
  * @author Lucas Ward
  * @author Dave Syer
@@ -115,7 +116,7 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 	@Override
 	public void saveStepExecution(StepExecution stepExecution) {
 		List<Object[]> parameters = buildStepExecutionParameters(stepExecution);
-		Object[] parameterValues = (Object[])parameters.get(0);
+		Object[] parameterValues = parameters.get(0);
 
 		//Template expects an int array fails with Integer
 		int[] parameterTypes = new int[parameters.get(1).length];
@@ -147,7 +148,7 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
                     StepExecution stepExecution = iterator.next();
                     List<Object[]> parameters = buildStepExecutionParameters(stepExecution);
-                    Object[] parameterValues = (Object[]) parameters.get(0);
+                    Object[] parameterValues = parameters.get(0);
                     Integer[] parameterTypes = (Integer[]) parameters.get(1);
                     for (int indx = 0; indx < parameterValues.length; indx++) {
                         switch (parameterTypes[indx]) {
@@ -250,8 +251,8 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 
 			// Avoid concurrent modifications...
 			if (count == 0) {
-				int curentVersion = getJdbcTemplate().queryForInt(getQuery(CURRENT_VERSION_STEP_EXECUTION),
-						new Object[] { stepExecution.getId() });
+				int curentVersion = getJdbcTemplate().queryForObject(getQuery(CURRENT_VERSION_STEP_EXECUTION),
+						new Object[] { stepExecution.getId() }, Integer.class);
 				throw new OptimisticLockingFailureException("Attempt to update step execution id="
 						+ stepExecution.getId() + " with wrong version (" + stepExecution.getVersion()
 						+ "), where current version is " + curentVersion);
@@ -270,7 +271,9 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 	 */
 	private String truncateExitDescription(String description) {
 		if (description != null && description.length() > exitMessageLength) {
-			logger.debug("Truncating long message before update of StepExecution, original message is: " + description);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Truncating long message before update of StepExecution, original message is: " + description);
+			}
 			return description.substring(0, exitMessageLength);
 		} else {
 			return description;
@@ -297,7 +300,7 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 				jobExecution.getId());
 	}
 
-	private static class StepExecutionRowMapper implements ParameterizedRowMapper<StepExecution> {
+	private static class StepExecutionRowMapper implements RowMapper<StepExecution> {
 
 		private final JobExecution jobExecution;
 

@@ -39,7 +39,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.util.Assert;
 
 /**
@@ -123,7 +123,6 @@ public class JobRepositoryTestUtils extends AbstractJdbcBatchMetadataDao impleme
 	 * @param count the required number of instances of {@link JobExecution} to
 	 * create
 	 * @return a collection of {@link JobExecution}
-	 * @throws Exception if there is a problem in the {@link JobRepository}
 	 */
 	public List<JobExecution> createJobExecutions(String jobName, String[] stepNames, int count)
 			throws JobExecutionAlreadyRunningException, JobRestartException, JobInstanceAlreadyCompleteException {
@@ -147,7 +146,6 @@ public class JobRepositoryTestUtils extends AbstractJdbcBatchMetadataDao impleme
 	 * @param count the required number of instances of {@link JobExecution} to
 	 * create
 	 * @return a collection of {@link JobExecution}
-	 * @throws Exception if there is a problem in the {@link JobRepository}
 	 */
 	public List<JobExecution> createJobExecutions(int count) throws JobExecutionAlreadyRunningException,
 	JobRestartException, JobInstanceAlreadyCompleteException {
@@ -166,7 +164,7 @@ public class JobRepositoryTestUtils extends AbstractJdbcBatchMetadataDao impleme
 		for (JobExecution jobExecution : list) {
 			List<Long> stepExecutionIds = jdbcTemplate.query(
 					getQuery("select STEP_EXECUTION_ID from %PREFIX%STEP_EXECUTION where JOB_EXECUTION_ID=?"),
-					new ParameterizedRowMapper<Long>() {
+					new RowMapper<Long>() {
 						@Override
 						public Long mapRow(ResultSet rs, int rowNum) throws SQLException {
 							return rs.getLong(1);

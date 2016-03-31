@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2013 the original author or authors.
+ * Copyright 2006-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,6 @@
  */
 
 package org.springframework.batch.core.repository.support;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +33,11 @@ import org.springframework.batch.core.repository.dao.JobInstanceDao;
 import org.springframework.batch.core.repository.dao.StepExecutionDao;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 
 /**
  *
@@ -116,12 +116,16 @@ public class SimpleJobRepository implements JobRepository {
 
 			// check for running executions and find the last started
 			for (JobExecution execution : executions) {
-				if (execution.isRunning()) {
+				if (execution.isRunning() || execution.isStopping()) {
 					throw new JobExecutionAlreadyRunningException("A job execution for this job is already running: "
 							+ jobInstance);
 				}
-
 				BatchStatus status = execution.getStatus();
+				if (status == BatchStatus.UNKNOWN) {
+					throw new JobRestartException("Cannot restart job from UNKNOWN status. "
+							+ "The last execution ended with a failure that could not be rolled back, "
+							+ "so it may be dangerous to proceed. Manual intervention is probably necessary.");
+				}
 				if (execution.getJobParameters().getParameters().size() > 0 && (status == BatchStatus.COMPLETED || status == BatchStatus.ABANDONED)) {
 					throw new JobInstanceAlreadyCompleteException(
 							"A job instance already exists and is complete for parameters=" + jobParameters
@@ -157,6 +161,8 @@ public class SimpleJobRepository implements JobRepository {
 		Assert.notNull(jobExecution.getId(), "JobExecution must be already saved (have an id assigned).");
 
 		jobExecution.setLastUpdated(new Date(System.currentTimeMillis()));
+
+		jobExecutionDao.synchronizeStatus(jobExecution);
 		jobExecutionDao.updateJobExecution(jobExecution);
 	}
 
@@ -287,6 +293,7 @@ public class SimpleJobRepository implements JobRepository {
 
 		if (jobExecution != null) {
 			jobExecution.setExecutionContext(ecDao.getExecutionContext(jobExecution));
+			stepExecutionDao.addStepExecutions(jobExecution);
 		}
 		return jobExecution;
 

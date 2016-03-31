@@ -1,3 +1,18 @@
+/*
+ * Copyright 2010-2014 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.batch.core.test.step;
 
 import static org.junit.Assert.assertEquals;
@@ -20,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -33,8 +49,8 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.ParseException;
 import org.springframework.batch.item.UnexpectedInputException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -143,7 +159,7 @@ public class FaultTolerantStepFactoryBeanRollbackIntegrationTests {
 
 				writer.setFailures("1", "2", "3", "4", "5");
 
-				Step step = (Step) factory.getObject();
+				Step step = factory.getObject();
 
 				stepExecution = jobExecution.createStepExecution(factory.getName());
 				repository.add(stepExecution);
@@ -194,6 +210,7 @@ public class FaultTolerantStepFactoryBeanRollbackIntegrationTests {
 			counter = -1;
 		}
 
+		@Override
 		public synchronized String read() throws Exception, UnexpectedInputException, ParseException {
 			counter++;
 			if (counter >= items.length) {
@@ -222,7 +239,8 @@ public class FaultTolerantStepFactoryBeanRollbackIntegrationTests {
 
 		public List<String> getCommitted() {
 			return jdbcTemplate.query("SELECT MESSAGE from ERROR_LOG where STEP_NAME='written'",
-					new ParameterizedRowMapper<String>() {
+					new RowMapper<String>() {
+						@Override
 						public String mapRow(ResultSet rs, int rowNum) throws SQLException {
 							return rs.getString(1);
 						}
@@ -234,6 +252,7 @@ public class FaultTolerantStepFactoryBeanRollbackIntegrationTests {
 			jdbcTemplate.update("DELETE FROM ERROR_LOG where STEP_NAME='written'");
 		}
 
+		@Override
 		public void write(List<? extends String> items) throws Exception {
 			for (String item : items) {
 				written.add(item);
@@ -273,7 +292,8 @@ public class FaultTolerantStepFactoryBeanRollbackIntegrationTests {
 
 		public List<String> getCommitted() {
 			return jdbcTemplate.query("SELECT MESSAGE from ERROR_LOG where STEP_NAME='processed'",
-					new ParameterizedRowMapper<String>() {
+					new RowMapper<String>() {
+						@Override
 						public String mapRow(ResultSet rs, int rowNum) throws SQLException {
 							return rs.getString(1);
 						}
@@ -285,6 +305,7 @@ public class FaultTolerantStepFactoryBeanRollbackIntegrationTests {
 			jdbcTemplate.update("DELETE FROM ERROR_LOG where STEP_NAME='processed'");
 		}
 
+		@Override
 		public String process(String item) throws Exception {
 			processed.add(item);
 			logger.debug("Processed item: " + item);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2007 the original author or authors.
+ * Copyright 2006-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,13 @@
 package org.springframework.batch.core.configuration.support;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -37,6 +39,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
 
 /**
  * {@link ApplicationContextFactory} implementation that takes a parent context and a path to the context to create.
@@ -49,7 +52,7 @@ public abstract class AbstractApplicationContextFactory implements ApplicationCo
 
 	private static final Log logger = LogFactory.getLog(AbstractApplicationContextFactory.class);
 
-	private Object resource;
+	private Object[] resources;
 
 	private ConfigurableApplicationContext parent;
 
@@ -60,12 +63,12 @@ public abstract class AbstractApplicationContextFactory implements ApplicationCo
 	private Collection<Class<?>> beanPostProcessorExcludeClasses;
 
 	/**
-	 * Create a factory instance with the resource specified. The resource is a Spring configuration file or java
-	 * package containing configuration files.
+	 * Create a factory instance with the resource specified. The resources are Spring configuration files or java
+	 * packages containing configuration files.
 	 */
-	public AbstractApplicationContextFactory(Object resource) {
+	public AbstractApplicationContextFactory(Object... resource) {
 
-		this.resource = resource;
+		this.resources = resource;
 		beanFactoryPostProcessorClasses = new ArrayList<Class<? extends BeanFactoryPostProcessor>>();
 		beanFactoryPostProcessorClasses.add(PropertyPlaceholderConfigurer.class);
 		beanFactoryPostProcessorClasses.add(PropertySourcesPlaceholderConfigurer.class);
@@ -162,16 +165,16 @@ public abstract class AbstractApplicationContextFactory implements ApplicationCo
 	@Override
 	public ConfigurableApplicationContext createApplicationContext() {
 
-		if (resource == null) {
+		if (resources == null || resources.length == 0) {
 			return parent;
 		}
 
-		return createApplicationContext(parent, resource);
+		return createApplicationContext(parent, resources);
 
 	}
 
 	protected abstract ConfigurableApplicationContext createApplicationContext(ConfigurableApplicationContext parent,
-			Object resource);
+			Object... resources);
 
 	/**
 	 * Extension point for special subclasses that want to do more complex things with the context prior to refresh. The
@@ -199,23 +202,58 @@ public abstract class AbstractApplicationContextFactory implements ApplicationCo
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory parent,
 			ConfigurableListableBeanFactory beanFactory) {
 		if (copyConfiguration && parent != null) {
+			List<BeanPostProcessor> parentPostProcessors = new ArrayList<BeanPostProcessor>();
+			List<BeanPostProcessor> childPostProcessors = new ArrayList<BeanPostProcessor>();
+
+			childPostProcessors.addAll(beanFactory instanceof AbstractBeanFactory ? ((AbstractBeanFactory) beanFactory)
+					.getBeanPostProcessors() : new ArrayList<BeanPostProcessor>());
+			parentPostProcessors.addAll(parent instanceof AbstractBeanFactory ? ((AbstractBeanFactory) parent)
+					.getBeanPostProcessors() : new ArrayList<BeanPostProcessor>());
+
+			try {
+				Class<?> applicationContextAwareProcessorClass =
+						ClassUtils.forName("org.springframework.context.support.ApplicationContextAwareProcessor",
+								parent.getBeanClassLoader());
+
+				for (BeanPostProcessor beanPostProcessor : new ArrayList<BeanPostProcessor>(parentPostProcessors)) {
+					if (applicationContextAwareProcessorClass.isAssignableFrom(beanPostProcessor.getClass())) {
+						logger.debug("Removing parent ApplicationContextAwareProcessor");
+						parentPostProcessors.remove(beanPostProcessor);
+					}
+				}
+			}
+			catch (ClassNotFoundException e) {
+				throw new IllegalStateException(e);
+			}
+
+			List<BeanPostProcessor> aggregatedPostProcessors = new ArrayList<BeanPostProcessor>();
+			aggregatedPostProcessors.addAll(childPostProcessors);
+			aggregatedPostProcessors.addAll(parentPostProcessors);
+
+			for (BeanPostProcessor beanPostProcessor : new ArrayList<BeanPostProcessor>(aggregatedPostProcessors)) {
+				for (Class<?> cls : beanPostProcessorExcludeClasses) {
+					if (cls.isAssignableFrom(beanPostProcessor.getClass())) {
+						if (logger.isDebugEnabled()) {
+							logger.debug("Removing bean post processor: " + beanPostProcessor + " of type " + cls);
+						}
+						aggregatedPostProcessors.remove(beanPostProcessor);
+					}
+				}
+			}
+
 			beanFactory.copyConfigurationFrom(parent);
+
 			List<BeanPostProcessor> beanPostProcessors = beanFactory instanceof AbstractBeanFactory ? ((AbstractBeanFactory) beanFactory)
 					.getBeanPostProcessors() : new ArrayList<BeanPostProcessor>();
-					for (BeanPostProcessor beanPostProcessor : new ArrayList<BeanPostProcessor>(beanPostProcessors)) {
-						for (Class<?> cls : beanPostProcessorExcludeClasses) {
-							if (cls.isAssignableFrom(beanPostProcessor.getClass())) {
-								logger.debug("Removing bean post processor: " + beanPostProcessor + " of type " + cls);
-								beanPostProcessors.remove(beanPostProcessor);
-							}
-						}
-					}
+
+			beanPostProcessors.clear();
+			beanPostProcessors.addAll(aggregatedPostProcessors);
 		}
 	}
 
 	@Override
 	public String toString() {
-		return "ApplicationContextFactory [resource=" + resource + "]";
+		return "ApplicationContextFactory [resources=" + Arrays.toString(resources) + "]";
 	}
 
 	@Override

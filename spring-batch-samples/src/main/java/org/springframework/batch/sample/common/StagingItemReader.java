@@ -25,6 +25,7 @@ import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
@@ -32,10 +33,9 @@ import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ReaderNotOpenException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.util.Assert;
 import org.springframework.util.SerializationUtils;
 
@@ -83,7 +83,7 @@ InitializingBean, DisposableBean {
 
 					"SELECT ID FROM BATCH_STAGING WHERE JOB_ID=? AND PROCESSED=? ORDER BY ID",
 
-					new ParameterizedRowMapper<Long>() {
+					new RowMapper<Long>() {
 						@Override
 						public Long mapRow(ResultSet rs, int rowNum) throws SQLException {
 							return rs.getLong(1);
@@ -97,8 +97,7 @@ InitializingBean, DisposableBean {
 	}
 
 	@Override
-	public ProcessIndicatorItemWrapper<T> read() throws DataAccessException {
-
+	public ProcessIndicatorItemWrapper<T> read() {
 		if (!initialized) {
 			throw new ReaderNotOpenException("Reader must be open before it can be used.");
 		}
@@ -116,7 +115,7 @@ InitializingBean, DisposableBean {
 		}
 		@SuppressWarnings("unchecked")
 		T result = (T) jdbcTemplate.queryForObject("SELECT VALUE FROM BATCH_STAGING WHERE ID=?",
-				new ParameterizedRowMapper<Object>() {
+				new RowMapper<Object>() {
 			@Override
 			public Object mapRow(ResultSet rs, int rowNum) throws SQLException {
 				byte[] blob = rs.getBytes(1);
@@ -125,7 +124,6 @@ InitializingBean, DisposableBean {
 		}, id);
 
 		return new ProcessIndicatorItemWrapper<T>(id, result);
-
 	}
 
 	@Override

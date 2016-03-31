@@ -104,15 +104,17 @@ public class ExtendedConnectionDataSourceProxy implements SmartDataSource, Initi
 	}
 
 	/**
-	 * Constructor that takes as a parameter with the {&link DataSource} to be
+	 * Constructor that takes as a parameter with the {@link DataSource} to be
 	 * wrapped.
+	 *
+	 * @param dataSource DataSource to be used
 	 */
 	public ExtendedConnectionDataSourceProxy(DataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
 	/**
-	 * Setter for the {&link DataSource} that is to be wrapped.
+	 * Setter for the {@link DataSource} that is to be wrapped.
 	 *
 	 * @param dataSource the DataSource
 	 */

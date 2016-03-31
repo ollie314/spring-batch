@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2012 the original author or authors.
+ * Copyright 2006-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ public class SqlPagingQueryUtils {
 	 * 
 	 * @param provider {@link AbstractSqlPagingQueryProvider} providing the
 	 * implementation specifics
-	 * @param remainingPageQuery is this query for the ramining pages (true) as
+	 * @param remainingPageQuery is this query for the remaining pages (true) as
 	 * opposed to the first page (false)
 	 * @param limitClause the implementation specific limit clause to be used
 	 * @return the generated query
@@ -63,7 +63,7 @@ public class SqlPagingQueryUtils {
 	 * 
 	 * @param provider {@link AbstractSqlPagingQueryProvider} providing the
 	 * implementation specifics
-	 * @param remainingPageQuery is this query for the ramining pages (true) as
+	 * @param remainingPageQuery is this query for the remaining pages (true) as
 	 * opposed to the first page (false)
 	 * @param limitClause the implementation specific limit clause to be used
 	 * @return the generated query
@@ -91,7 +91,7 @@ public class SqlPagingQueryUtils {
 	 * 
 	 * @param provider {@link AbstractSqlPagingQueryProvider} providing the
 	 * implementation specifics
-	 * @param remainingPageQuery is this query for the ramining pages (true) as
+	 * @param remainingPageQuery is this query for the remaining pages (true) as
 	 * opposed to the first page (false)
 	 * @param topClause the implementation specific top clause to be used
 	 * @return the generated query
@@ -113,7 +113,7 @@ public class SqlPagingQueryUtils {
 	 * 
 	 * @param provider {@link AbstractSqlPagingQueryProvider} providing the
 	 * implementation specifics
-	 * @param remainingPageQuery is this query for the ramining pages (true) as
+	 * @param remainingPageQuery is this query for the remaining pages (true) as
 	 * opposed to the first page (false)
 	 * @param topClause the implementation specific top clause to be used
 	 * @return the generated query
@@ -352,8 +352,9 @@ public class SqlPagingQueryUtils {
 		if (remainingPageQuery) {
 			sql.append(" WHERE ");
 			if (provider.getWhereClause() != null) {
+				sql.append("(");
 				sql.append(provider.getWhereClause());
-				sql.append(" AND ");
+				sql.append(") AND ");
 			}
 
 			buildSortConditions(provider, sql);

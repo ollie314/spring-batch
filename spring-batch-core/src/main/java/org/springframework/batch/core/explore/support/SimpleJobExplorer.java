@@ -16,9 +16,6 @@
 
 package org.springframework.batch.core.explore.support;
 
-import java.util.List;
-import java.util.Set;
-
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.StepExecution;
@@ -29,12 +26,16 @@ import org.springframework.batch.core.repository.dao.JobExecutionDao;
 import org.springframework.batch.core.repository.dao.JobInstanceDao;
 import org.springframework.batch.core.repository.dao.StepExecutionDao;
 
+import java.util.List;
+import java.util.Set;
+
 /**
  * Implementation of {@link JobExplorer} using the injected DAOs.
  *
  * @author Dave Syer
  * @author Lucas Ward
  * @author Michael Minella
+ * @author Will Schipp
  *
  * @see JobExplorer
  * @see JobInstanceDao
@@ -195,7 +196,6 @@ public class SimpleJobExplorer implements JobExplorer {
 	 * requires JobParameters) plus StepExecutions
 	 */
 	private void getJobExecutionDependencies(JobExecution jobExecution) {
-
 		JobInstance jobInstance = jobInstanceDao.getJobInstance(jobExecution);
 		stepExecutionDao.addStepExecutions(jobExecution);
 		jobExecution.setJobInstance(jobInstance);
@@ -207,5 +207,10 @@ public class SimpleJobExplorer implements JobExplorer {
 		if (stepExecution != null) {
 			stepExecution.setExecutionContext(ecDao.getExecutionContext(stepExecution));
 		}
+	}
+
+	@Override
+	public List<JobInstance> findJobInstancesByJobName(String jobName, int start, int count) {
+		return jobInstanceDao.findJobInstancesByName(jobName, start, count);
 	}
 }

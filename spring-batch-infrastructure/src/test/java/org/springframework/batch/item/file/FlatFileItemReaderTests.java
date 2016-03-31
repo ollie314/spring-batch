@@ -1,16 +1,37 @@
+/*
+ * Copyright 2008-2013 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.batch.item.file;
 
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
 
+import javax.swing.Spring;
+
 import org.junit.Before;
 import org.junit.Test;
+
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemCountAware;
 import org.springframework.batch.item.ItemStreamException;
@@ -37,13 +58,17 @@ public class FlatFileItemReaderTests {
 
 	private ExecutionContext executionContext = new ExecutionContext();
 
+	private Resource inputResource2 = getInputResource("testLine1\ntestLine2\ntestLine3\ntestLine4\ntestLine5\ntestLine6");
+
+	private Resource inputResource1 = getInputResource("testLine1\ntestLine2\ntestLine3\ntestLine4\ntestLine5\ntestLine6");
+
 	@Before
 	public void setUp() {
 
-		reader.setResource(getInputResource("testLine1\ntestLine2\ntestLine3\ntestLine4\ntestLine5\ntestLine6"));
+		reader.setResource(inputResource1);
 		reader.setLineMapper(new PassThroughLineMapper());
 
-		itemReader.setResource(getInputResource("testLine1\ntestLine2\ntestLine3\ntestLine4\ntestLine5\ntestLine6"));
+		itemReader.setResource(inputResource2);
 		itemReader.setLineMapper(new ItemLineMapper());
 	}
 
@@ -356,7 +381,7 @@ public class FlatFileItemReaderTests {
 	@Test
 	public void testDirectoryResource() throws Exception {
 
-		FileSystemResource resource = new FileSystemResource("target/data");
+		FileSystemResource resource = new FileSystemResource("build/data");
 		resource.getFile().mkdirs();
 		assertTrue(resource.getFile().isDirectory());
 		reader.setResource(resource);
@@ -430,7 +455,8 @@ public class FlatFileItemReaderTests {
 			assertEquals(2, expected.getLineNumber());
 			assertEquals("testLine2", expected.getInput());
 			assertEquals("Couldn't map line 2", expected.getCause().getMessage());
-			assertEquals("Parsing error at line: 2 in resource=[resource loaded from byte array], input=[testLine2]", expected.getMessage());
+			assertThat(expected.getMessage(), startsWith("Parsing error at line: 2 in resource=["));
+			assertThat(expected.getMessage(), endsWith("], input=[testLine2]"));
 		}
 	}
 

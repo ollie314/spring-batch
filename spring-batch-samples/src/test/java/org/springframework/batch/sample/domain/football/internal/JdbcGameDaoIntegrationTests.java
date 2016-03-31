@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2012 the original author or authors.
+ * Copyright 2006-2014 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +26,12 @@ import javax.sql.DataSource;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.springframework.batch.sample.domain.football.Game;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.simple.ParameterizedRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,11 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {"/data-source-context.xml"})
 public class JdbcGameDaoIntegrationTests {
-
 	private JdbcGameDao gameDao;
-
 	private Game game = new Game();
-
 	private JdbcOperations jdbcTemplate;
 
 	@Autowired
@@ -59,7 +57,6 @@ public class JdbcGameDaoIntegrationTests {
 
 	@Before
 	public void onSetUpBeforeTransaction() throws Exception {
-
 		game.setId("XXXXX00");
 		game.setYear(1996);
 		game.setTeam("mia");
@@ -75,12 +72,10 @@ public class JdbcGameDaoIntegrationTests {
 		game.setReceptions(1);
 		game.setReceptionYards(16);
 		game.setTotalTd(2);
-
 	}
 
 	@Transactional @Test
 	public void testWrite() {
-
 		gameDao.write(Collections.singletonList(game));
 
 		Game tempGame = jdbcTemplate.queryForObject("SELECT * FROM GAMES where PLAYER_ID=? AND YEAR_NO=?",
@@ -88,10 +83,9 @@ public class JdbcGameDaoIntegrationTests {
 		assertEquals(tempGame, game);
 	}
 
-	private static class GameRowMapper implements ParameterizedRowMapper<Game> {
-
+	private static class GameRowMapper implements RowMapper<Game> {
+		@Override
 		public Game mapRow(ResultSet rs, int arg1) throws SQLException {
-
 			if (rs == null) {
 				return null;
 			}

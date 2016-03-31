@@ -1,8 +1,24 @@
+/*
+ * Copyright 2008-2013 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.batch.core.step.tasklet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 
@@ -10,6 +26,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
@@ -17,6 +37,9 @@ import org.springframework.batch.core.JobInterruptedException;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.scope.context.StepContext;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.util.Assert;
@@ -28,13 +51,26 @@ public class SystemCommandTaskletIntegrationTests {
 
 	private static final Log log = LogFactory.getLog(SystemCommandTaskletIntegrationTests.class);
 
-	private SystemCommandTasklet tasklet = new SystemCommandTasklet();
+	private SystemCommandTasklet tasklet;
 
 	private StepExecution stepExecution = new StepExecution("systemCommandStep", new JobExecution(new JobInstance(1L,
-			"systemCommandJob"), new JobParameters()));
+			"systemCommandJob"), 1L, new JobParameters(), "configurationName"));
+
+	@Mock
+	private JobExplorer jobExplorer;
 
 	@Before
 	public void setUp() throws Exception {
+		MockitoAnnotations.initMocks(this);
+
+		initializeTasklet();
+		tasklet.afterPropertiesSet();
+
+		tasklet.beforeStep(stepExecution);
+	}
+
+	private void initializeTasklet() {
+		tasklet = new SystemCommandTasklet();
 		tasklet.setEnvironmentParams(null); // inherit from parent process
 		tasklet.setWorkingDirectory(null); // inherit from parent process
 		tasklet.setSystemProcessExitCodeMapper(new TestExitCodeMapper());
@@ -43,9 +79,6 @@ public class SystemCommandTaskletIntegrationTests {
 		tasklet.setCommand("invalid command, change value for successful execution");
 		tasklet.setInterruptOnCancel(true);
 		tasklet.setTaskExecutor(new SimpleAsyncTaskExecutor());
-		tasklet.afterPropertiesSet();
-
-		tasklet.beforeStep(stepExecution);
 	}
 
 	/*
@@ -226,17 +259,27 @@ public class SystemCommandTaskletIntegrationTests {
 	 */
 	@Test
 	public void testStopped() throws Exception {
+		initializeTasklet();
+		tasklet.setJobExplorer(jobExplorer);
+		tasklet.afterPropertiesSet();
+		tasklet.beforeStep(stepExecution);
+
+		JobExecution stoppedJobExecution = new JobExecution(stepExecution.getJobExecution());
+		stoppedJobExecution.setStatus(BatchStatus.STOPPING);
+
+		when(jobExplorer.getJobExecution(1L)).thenReturn(stepExecution.getJobExecution(), stepExecution.getJobExecution(), stoppedJobExecution);
+
 		String command = System.getProperty("os.name").toLowerCase().indexOf("win") >= 0 ?
 				"ping 1.1.1.1 -n 1 -w 5000" :
-					"sleep 5";
+					"sleep 15";
 		tasklet.setCommand(command);
 		tasklet.setTerminationCheckInterval(10);
 		tasklet.afterPropertiesSet();
 
 		StepContribution contribution = stepExecution.createStepContribution();
-		//send stop
-		tasklet.stop();
-		tasklet.execute(contribution, null);
+		StepContext stepContext = new StepContext(stepExecution);
+		ChunkContext chunkContext = new ChunkContext(stepContext);
+		tasklet.execute(contribution, chunkContext);
 
 		assertEquals(contribution.getExitStatus().getExitCode(),ExitStatus.STOPPED.getExitCode());
 	}

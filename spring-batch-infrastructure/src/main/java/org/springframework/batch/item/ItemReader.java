@@ -17,14 +17,14 @@
 package org.springframework.batch.item;
 
 /**
- * Strategy interface for providing the data. <br/>
+ * Strategy interface for providing the data. <br>
  * 
  * Implementations are expected to be stateful and will be called multiple times
  * for each batch, with each call to {@link #read()} returning a different value
- * and finally returning <code>null</code> when all input data is exhausted.<br/>
+ * and finally returning <code>null</code> when all input data is exhausted.<br>
  * 
- * Implementations need *not* be thread safe and clients of a {@link ItemReader}
- * need to be aware that this is the case.<br/>
+ * Implementations need <b>not</b> be thread-safe and clients of a {@link ItemReader}
+ * need to be aware that this is the case.<br>
  * 
  * A richer interface (e.g. with a look ahead or peek) is not feasible because
  * we need to support transactions in an asynchronous batch.
@@ -52,6 +52,7 @@ public interface ItemReader<T> {
 	 * with the input data. Assume potentially transient, so subsequent calls to
 	 * read might succeed.
 	 * @throws Exception if an there is a non-specific error.
+	 * @return T the item to be processed
 	 */
 	T read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException;
 

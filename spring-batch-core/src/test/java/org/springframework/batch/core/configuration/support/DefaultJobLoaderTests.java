@@ -20,6 +20,7 @@ import static org.junit.Assert.fail;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 
 import org.junit.Test;
 import org.springframework.batch.core.Job;
@@ -28,7 +29,6 @@ import org.springframework.batch.core.JobParametersIncrementer;
 import org.springframework.batch.core.JobParametersValidator;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.DuplicateJobException;
-import org.springframework.batch.core.configuration.JobFactory;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.configuration.StepRegistry;
 import org.springframework.batch.core.launch.NoSuchJobException;
@@ -36,6 +36,7 @@ import org.springframework.batch.core.step.NoSuchStepException;
 import org.springframework.batch.core.step.StepLocator;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * @author Dave Syer
@@ -57,6 +58,18 @@ public class DefaultJobLoaderTests {
     private StepRegistry stepRegistry = new MapStepRegistry();
 
     private DefaultJobLoader jobLoader = new DefaultJobLoader(jobRegistry, stepRegistry);
+
+	@Test
+	public void testClear() throws Exception {
+		GenericApplicationContextFactory factory = new GenericApplicationContextFactory(new ByteArrayResource(
+				JOB_XML.getBytes()));
+		jobLoader.load(factory);
+		assertEquals(1, ((Map) ReflectionTestUtils.getField(jobLoader, "contexts")).size());
+		assertEquals(1, ((Map) ReflectionTestUtils.getField(jobLoader, "contextToJobNames")).size());
+		jobLoader.clear();
+		assertEquals(0, ((Map) ReflectionTestUtils.getField(jobLoader, "contexts")).size());
+		assertEquals(0, ((Map) ReflectionTestUtils.getField(jobLoader, "contextToJobNames")).size());
+	}
 
 	@Test
 	public void testLoadWithExplicitName() throws Exception {
@@ -257,25 +270,4 @@ public class DefaultJobLoaderTests {
         }
     }
 
-    private static class JobRegistryMock implements JobRegistry {
-        @Override
-		public void register(JobFactory jobFactory) throws DuplicateJobException {
-            // dummy
-        }
-
-        @Override
-		public void unregister(String jobName) {
-            // dummy
-        }
-
-        @Override
-		public Collection<String> getJobNames() {
-            return Collections.emptyList();
-        }
-
-        @Override
-		public Job getJob(String name) throws NoSuchJobException {
-            throw new NoSuchJobException("Mock implementation does not hold any job.");
-        }
-    }
 }

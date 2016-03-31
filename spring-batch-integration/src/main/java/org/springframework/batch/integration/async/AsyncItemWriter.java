@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2007 the original author or authors.
+ * Copyright 2006-2015 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,35 +15,71 @@
  */
 package org.springframework.batch.integration.async;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Future;
-
+import org.springframework.batch.item.ExecutionContext;
+import org.springframework.batch.item.ItemStream;
+import org.springframework.batch.item.ItemStreamException;
+import org.springframework.batch.item.ItemStreamWriter;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.util.Assert;
 
-public class AsyncItemWriter<T> implements ItemWriter<Future<T>>, InitializingBean {
-	
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Future;
+
+public class AsyncItemWriter<T> implements ItemStreamWriter<Future<T>>, InitializingBean {
+
 	private ItemWriter<T> delegate;
-	
+
 	public void afterPropertiesSet() throws Exception {
 		Assert.notNull(delegate, "A delegate ItemWriter must be provided.");
 	}
-	
+
 	/**
-	 * @param delegate
+	 * @param delegate ItemWriter that does the actual writing of the Future results
 	 */
 	public void setDelegate(ItemWriter<T> delegate) {
 		this.delegate = delegate;
 	}
 
+	/**
+	 * In the processing of the {@link java.util.concurrent.Future}s passed, nulls are <em>not</em> passed to the
+	 * delegate since they are considered filtered out by the {@link org.springframework.batch.integration.async.AsyncItemProcessor}'s
+	 * delegated {@link org.springframework.batch.item.ItemProcessor}.
+	 *
+	 * @param items {@link java.util.concurrent.Future}s to be upwrapped and passed to the delegate
+	 * @throws Exception
+	 */
 	public void write(List<? extends Future<T>> items) throws Exception {
 		List<T> list = new ArrayList<T>();
 		for (Future<T> future : items) {
-			list.add(future.get());
+			T item = future.get();
+
+			if(item != null) {
+				list.add(future.get());
+			}
 		}
 		delegate.write(list);
 	}
 
+	@Override
+	public void open(ExecutionContext executionContext) throws ItemStreamException {
+		if (delegate instanceof ItemStream) {
+			((ItemStream) delegate).open(executionContext);
+		}
+	}
+
+	@Override
+	public void update(ExecutionContext executionContext) throws ItemStreamException {
+		if (delegate instanceof ItemStream) {
+			((ItemStream) delegate).update(executionContext);
+		}
+	}
+
+	@Override
+	public void close() throws ItemStreamException {
+		if (delegate instanceof ItemStream) {
+			((ItemStream) delegate).close();
+		}
+	}
 }

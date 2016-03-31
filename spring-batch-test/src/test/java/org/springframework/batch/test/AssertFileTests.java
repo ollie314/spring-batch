@@ -1,9 +1,24 @@
+/*
+ * Copyright 2008-2009 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.springframework.batch.test;
 
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.fail;
-import junit.framework.AssertionFailedError;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import org.junit.ComparisonFailure;
 import org.junit.Test;
 import org.springframework.core.io.FileSystemResource;
 
@@ -27,7 +42,7 @@ public class AssertFileTests {
 			executeAssertEquals("input1.txt", "input2.txt");
 			fail();
 		}
-		catch (AssertionFailedError e) {
+		catch (ComparisonFailure e) {
 			assertTrue(e.getMessage().startsWith("Line number 3 does not match."));
 		}
 	}
@@ -38,7 +53,7 @@ public class AssertFileTests {
 			executeAssertEquals("input3.txt", "input1.txt");
 			fail();
 		}
-		catch (AssertionFailedError e) {
+		catch (AssertionError e) {
 			assertTrue(e.getMessage().startsWith("More lines than expected.  There should not be a line number 4."));
 		}
 	}
@@ -49,7 +64,7 @@ public class AssertFileTests {
 			executeAssertEquals("input1.txt", "input3.txt");
 			fail();
 		}
-		catch (AssertionFailedError e) {
+		catch (AssertionError e) {
 			assertTrue(e.getMessage().startsWith("Line number 4 does not match."));
 		}
 	}
@@ -65,7 +80,7 @@ public class AssertFileTests {
 			executeAssertEquals("blank.txt", "input1.txt");
 			fail();
 		}
-		catch (AssertionFailedError e) {
+		catch (AssertionError e) {
 			assertTrue(e.getMessage().startsWith("More lines than expected.  There should not be a line number 1."));
 		}
 	}
@@ -76,7 +91,7 @@ public class AssertFileTests {
 			executeAssertEquals("input1.txt", "blank.txt");
 			fail();
 		}
-		catch (AssertionFailedError e) {
+		catch (AssertionError e) {
 			assertTrue(e.getMessage().startsWith("Line number 1 does not match."));
 		}
 	}
