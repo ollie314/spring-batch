@@ -8,9 +8,10 @@ buildscript {
 		maven { url 'https://repo.spring.io/plugins-release' }
 	}
 	dependencies {
-		classpath 'org.springframework.build.gradle:docbook-reference-plugin:0.2.8'
-		classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.5'
-		classpath 'io.spring.gradle:spring-io-plugin:0.0.4.RELEASE'
+		classpath 'io.spring.gradle:docbook-reference-plugin:0.3.1'
+		classpath 'org.springframework.build.gradle:propdeps-plugin:0.0.7'
+		classpath 'io.spring.gradle:spring-io-plugin:0.0.5.RELEASE'
+		classpath "io.spring.gradle:dependency-management-plugin:0.5.1.RELEASE"
 	}
 }
 
@@ -22,7 +23,7 @@ ext {
 	linkScmConnection    = 'git://github.com/spring-projects/spring-batch.git'
 	linkScmDevConnection = 'git@github.com:spring-projects/spring-batch.git'
 
-	mainProjects = subprojects.findAll { !it.name.endsWith('tests') && !it.name.endsWith('samples') }
+	mainProjects = subprojects.findAll { !it.name.endsWith('tests') && !it.name.endsWith('samples') && it.name.startsWith('spring-batch-')}
 }
 
 allprojects {
@@ -50,10 +51,11 @@ allprojects {
 		springDataJpaVersion = '1.6.0.RELEASE'
 		springDataMongodbVersion = '1.5.0.RELEASE'
 		springDataNeo4jVersion = '3.1.0.RELEASE'
+		springDataNeo4j4Version = '4.1.1.RELEASE'
 		springIntegrationVersion = '4.0.1.RELEASE'
 		springLdapVersion = '2.0.2.RELEASE'
 
-		activemqVersion = '5.9.1'
+		activemqVersion = '5.13.2'
 		aspectjVersion = '1.8.0'
 		castorVersion = '1.3.2'
 		commonsCollectionsVersion = '3.2.1'
@@ -62,13 +64,14 @@ allprojects {
 		commonsLangVersion = '2.6'
 		derbyVersion = '10.10.1.1'
 		groovyVersion = '2.3.0'
-        hamcrestVersion = '1.3'
+		hamcrestVersion = '1.3'
 		h2databaseVersion = '1.3.175'
 		hibernateVersion = '4.2.12.Final'
 		hibernateValidatorVersion = '4.3.1.Final'
 		hsqldbVersion = '2.3.2'
 		ibatisVersion = '2.3.4.726'
 		jacksonVersion = '1.9.13'
+		jackson2Version = "2.3.3"
 		javaMailVersion = '1.4.7'
 		javaxBatchApiVersion = '1.0'
 		javaxInjectVersion = '1'
@@ -94,13 +97,14 @@ allprojects {
 	}
 }
 
-subprojects { subproject ->
+configure(subprojects - project(":spring-build-src")) { subproject ->
 
 	apply plugin: 'java'
 	apply from:   "${rootProject.projectDir}/publish-maven.gradle"
 	apply plugin: 'jacoco'
 	apply plugin: 'propdeps-idea'
 	apply plugin: 'propdeps-eclipse'
+	apply plugin: 'merge'
 
 	jacoco {
 		toolVersion = "0.7.0.201403182114"
@@ -229,6 +233,18 @@ configure(mainProjects) {
 	}
 }
 
+project("spring-build-src") {
+	description = "Exposes gradle buildSrc for IDE support"
+	apply plugin: "groovy"
+
+	dependencies {
+		compile gradleApi()
+		compile localGroovy()
+	}
+
+	configurations.archives.artifacts.clear()
+}
+
 project('spring-batch-core') {
 	description = 'Spring Batch Core'
 
@@ -247,25 +263,22 @@ project('spring-batch-core') {
 		compile "org.springframework:spring-tx:$springVersion"
 
 		testCompile "org.springframework:spring-test:$springVersion"
-        testCompile("org.mockito:mockito-core:$mockitoVersion") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
+		testCompile "org.mockito:mockito-core:$mockitoVersion"
 		testCompile "javax.inject:javax.inject:$javaxInjectVersion"
 		testCompile "org.hsqldb:hsqldb:$hsqldbVersion"
 		testCompile "com.h2database:h2:$h2databaseVersion"
 		testCompile "commons-io:commons-io:$commonsIoVersion"
 		testCompile "commons-dbcp:commons-dbcp:$commonsDdbcpVersion"
-        testCompile("junit:junit:${junitVersion}") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
-        testCompile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		testCompile "junit:junit:${junitVersion}"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		optional "org.aspectj:aspectjrt:$aspectjVersion"
 		optional "org.aspectj:aspectjweaver:$aspectjVersion"
 		optional "org.springframework:spring-jdbc:$springVersion"
 		optional "org.slf4j:slf4j-log4j12:$slf4jVersion"
 		optional "log4j:log4j:$log4jVersion"
+		optional "com.fasterxml.jackson.core:jackson-databind:${jackson2Version}"
 
-		provided "javax.batch:javax.batch-api:$javaxBatchApiVersion"
+		optional "javax.batch:javax.batch-api:$javaxBatchApiVersion"
 	}
 }
 
@@ -293,15 +306,11 @@ project('spring-batch-infrastructure') {
 		testCompile "com.h2database:h2:$h2databaseVersion"
 		testCompile "org.apache.derby:derby:$derbyVersion"
 		testCompile "org.springframework:spring-test:$springVersion"
-        testCompile("junit:junit:${junitVersion}") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
-        testCompile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		testCompile "junit:junit:${junitVersion}"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		testCompile "org.aspectj:aspectjrt:$aspectjVersion"
 		testCompile "org.aspectj:aspectjweaver:$aspectjVersion"
-        testCompile("org.mockito:mockito-core:$mockitoVersion") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
+		testCompile "org.mockito:mockito-core:$mockitoVersion"
 		testCompile "org.xerial:sqlite-jdbc:$sqliteVersion"
 
 		testRuntime "com.sun.mail:javax.mail:$javaMailVersion"
@@ -353,6 +362,35 @@ project('spring-batch-infrastructure') {
         optional "org.springframework.ldap:spring-ldap-core-tiger:$springLdapVersion"
         optional "org.springframework.ldap:spring-ldap-ldif-core:$springLdapVersion"
 	}
+
+	if (project.hasProperty('platformVersion')) {
+		def dataNeo4jVersion = dependencyManagement.springIoTestRuntime.managedVersions['org.springframework.data:spring-data-neo4j']
+		if (dataNeo4jVersion?.startsWith('4.')) {
+			tasks.withType(Test).matching { it.name =~ "springIoJdk.Test" }.all {
+				exclude '**/Neo4jItemReaderTests.class'
+			}
+		}
+	}
+}
+
+project('spring-batch-infrastructure-neo4j4') {
+
+	merge.into = project(':spring-batch-infrastructure')
+
+	dependencies {
+		optional "org.springframework.data:spring-data-neo4j:$springDataNeo4j4Version"
+		testCompile "org.mockito:mockito-core:$mockitoVersion"
+		testCompile "junit:junit:${junitVersion}"
+	}
+
+	if (project.hasProperty('platformVersion')) {
+		def dataNeo4jVersion = dependencyManagement.springIoTestRuntime.managedVersions['org.springframework.data:spring-data-neo4j']
+		if (dataNeo4jVersion?.startsWith('3.')) {
+			tasks.withType(Test).matching { it.name =~ "springIoJdk.Test" }.all {
+				enabled false
+			}
+		}
+	}
 }
 
 project('spring-batch-core-tests') {
@@ -370,10 +408,8 @@ project('spring-batch-core-tests') {
 		testCompile "org.hsqldb:hsqldb:$hsqldbVersion"
 		testCompile "commons-io:commons-io:$commonsIoVersion"
 		testCompile "org.apache.derby:derby:$derbyVersion"
-		testCompile("junit:junit:${junitVersion}") {
-			exclude group:'org.hamcrest', module:'hamcrest-core'
-		}
-		testCompile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		testCompile "junit:junit:${junitVersion}"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		testCompile "log4j:log4j:$log4jVersion"
 		testCompile "org.springframework:spring-test:$springVersion"
 		testCompile "org.springframework:spring-jdbc:$springVersion"
@@ -407,10 +443,8 @@ project('spring-batch-infrastructure-tests') {
 		testCompile "org.apache.derby:derby:$derbyVersion"
 		testCompile "org.apache.activemq:activemq-broker:$activemqVersion"
 		testCompile "org.apache.activemq:activemq-kahadb-store:$activemqVersion"
-        testCompile("junit:junit:${junitVersion}") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
-        testCompile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		testCompile "junit:junit:${junitVersion}"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		testCompile "org.apache.geronimo.specs:geronimo-j2ee-management_1.1_spec:1.0.1"
 		testCompile "xmlunit:xmlunit:$xmlunitVersion"
 		testCompile ("org.codehaus.castor:castor-xml:$castorVersion") {
@@ -429,9 +463,7 @@ project('spring-batch-infrastructure-tests') {
 		}
 		testCompile "org.springframework:spring-jdbc:$springVersion"
 		testCompile "org.springframework:spring-test:$springVersion"
-        testCompile("org.mockito:mockito-core:$mockitoVersion") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
+		testCompile "org.mockito:mockito-core:$mockitoVersion"
 
 		optional "org.slf4j:slf4j-log4j12:$slf4jVersion"
 		optional "org.apache.ibatis:ibatis-sqlmap:$ibatisVersion"
@@ -462,10 +494,8 @@ project('spring-batch-test') {
 	dependencies {
 		compile project(":spring-batch-core")
 
-        compile("junit:junit:${junitVersion}") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
-        compile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		compile "junit:junit:${junitVersion}" 
+		compile "org.hamcrest:hamcrest-library:$hamcrestVersion" 
 		compile "org.springframework:spring-test:$springVersion"
 		compile "org.springframework:spring-jdbc:$springVersion"
 		compile "commons-io:commons-io:$commonsIoVersion"
@@ -496,10 +526,8 @@ project('spring-batch-integration') {
 
 		testCompile "org.apache.activemq:activemq-broker:$activemqVersion"
 		testCompile "org.apache.activemq:activemq-kahadb-store:$activemqVersion"
-        testCompile("junit:junit:${junitVersion}") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
-        testCompile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		testCompile "junit:junit:${junitVersion}"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		testCompile "org.aspectj:aspectjrt:$aspectjVersion"
 		testCompile "org.aspectj:aspectjweaver:$aspectjVersion"
 		testCompile "commons-dbcp:commons-dbcp:$commonsDdbcpVersion"
@@ -508,11 +536,10 @@ project('spring-batch-integration') {
 		testCompile "org.apache.derby:derby:$derbyVersion"
 		testCompile "org.hsqldb:hsqldb:$hsqldbVersion"
 		testCompile "org.springframework:spring-test:$springVersion"
-        testCompile("org.mockito:mockito-core:$mockitoVersion") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
+		testCompile "org.mockito:mockito-core:$mockitoVersion"
 		testCompile("org.springframework.integration:spring-integration-test:$springIntegrationVersion") {
 			exclude group: 'junit', module: 'junit-dep'
+			exclude group:'org.hamcrest', module:'hamcrest-all'
 		}
 		testCompile "org.springframework.integration:spring-integration-jdbc:$springIntegrationVersion"
 
@@ -521,6 +548,8 @@ project('spring-batch-integration') {
 		optional "log4j:log4j:1.2.14"
 		optional "org.springframework.integration:spring-integration-jms:$springIntegrationVersion"
 		optional "org.springframework:spring-jms:$springVersion"
+
+		optional "javax.batch:javax.batch-api:$javaxBatchApiVersion"
 	}
 }
 
@@ -564,18 +593,14 @@ project('spring-batch-samples') {
 
 		testCompile "xmlunit:xmlunit:$xmlunitVersion"
 		testCompile project(":spring-batch-test")
-        testCompile("junit:junit:${junitVersion}") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
-        testCompile("org.hamcrest:hamcrest-all:$hamcrestVersion")
+		testCompile "junit:junit:${junitVersion}"
+		testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
 		testCompile "org.hsqldb:hsqldb:$hsqldbVersion"
 		testCompile "log4j:log4j:$log4jVersion"
 		testCompile "org.codehaus.groovy:groovy:$groovyVersion"
 		testCompile "org.codehaus.groovy:groovy-ant:$groovyVersion"
 		testCompile "org.springframework:spring-test:$springVersion"
-        testCompile("org.mockito:mockito-core:$mockitoVersion") {
-            exclude group:'org.hamcrest', module:'hamcrest-core'
-        }
+		testCompile "org.mockito:mockito-core:$mockitoVersion"
 
 		testRuntime "com.sun.mail:javax.mail:$javaMailVersion"
 
@@ -594,13 +619,13 @@ project('spring-batch-samples') {
 		optional "org.springframework.amqp:spring-rabbit:$springAmqpVersion"
         optional "javax.inject:javax.inject:1"
 
+		optional "javax.batch:javax.batch-api:$javaxBatchApiVersion"
 	}
 }
 
 apply plugin: 'docbook-reference'
 
 reference {
-	//sourceDir = file('src/reference/docbook')
 	sourceDir = file('src/site/docbook/reference')
 }
 
@@ -814,5 +839,5 @@ or specify the Gradle property `TCK_HOME`, e.g: ./gradlew runTck -PTCK_HOME=/pat
 
 task wrapper(type: Wrapper) {
 	description = 'Generates gradlew[.bat] scripts'
-	gradleVersion = '1.11'
+	gradleVersion = '2.12'
 }
